@@ -11,6 +11,7 @@ package com.whizzosoftware.hobson.hub.websockets;
 
 import com.whizzosoftware.hobson.api.event.EventHandler;
 import com.whizzosoftware.hobson.api.event.device.DeviceVariablesUpdateEvent;
+import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.plugin.AbstractHobsonPlugin;
@@ -35,6 +36,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 public class WebSocketsPlugin extends AbstractHobsonPlugin {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketsPlugin.class);
@@ -87,6 +90,14 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
             clientChannels.writeAndFlush(new TextWebSocketFrame(createTaskExecutionJSON(event).toString()));
         } else {
             logger.trace("Channel not open; ignoring event: " + event);
+        }
+    }
+
+    @EventHandler
+    public void onHubConfigurationUpdate(HubConfigurationUpdateEvent event) {
+        if (channel != null && channel.isOpen()) {
+            logger.trace("Writing event to client channels: " + event.toString());
+            clientChannels.writeAndFlush(new TextWebSocketFrame(createHubConfigurationJSON(event).toString()));
         }
     }
 
@@ -167,6 +178,19 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + event.getContext().getHubId() + "/tasks/" + event.getContext().getTaskId());
         props.put("name", task.getName());
+        return json;
+    }
+
+    private JSONObject createHubConfigurationJSON(HubConfigurationUpdateEvent event) {
+        JSONObject json = new JSONObject();
+        json.put("id", event.getEventId());
+        json.put("timestamp", event.getTimestamp());
+        JSONObject props = new JSONObject();
+        json.put("configuration", props);
+        Map<String,Object> p = event.getConfiguration().getPropertyValues();
+        for (String key : p.keySet()) {
+            props.put(key, p.get(key));
+        }
         return json;
     }
 }
