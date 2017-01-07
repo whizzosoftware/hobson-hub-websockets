@@ -143,7 +143,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         props.put("updates", updates);
         for (DeviceVariableUpdate u : event.getUpdates()) {
             JSONObject update = new JSONObject();
-            update.put("id", "/api/v1/hubs/" + u.getContext().getHubId() + "/plugins/" + u.getPluginId() + "/devices/" + u.getDeviceId() + "/variables/" + u.getContext().getName());
+            update.put("id", "/api/v1/hubs/" + u.getContext().getHubId() + "/plugins/local/" + u.getPluginId() + "/devices/" + u.getDeviceId() + "/variables/" + u.getContext().getName());
             update.put("name", u.getContext().getName());
             update.put("oldValue", u.getOldValue());
             update.put("newValue", u.getNewValue());
