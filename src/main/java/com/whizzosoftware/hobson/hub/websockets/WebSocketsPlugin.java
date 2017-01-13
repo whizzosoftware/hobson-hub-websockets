@@ -10,8 +10,13 @@
 package com.whizzosoftware.hobson.hub.websockets;
 
 import com.whizzosoftware.hobson.api.event.EventHandler;
+import com.whizzosoftware.hobson.api.event.device.DeviceAvailableEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceVariablesUpdateEvent;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
+import com.whizzosoftware.hobson.api.event.plugin.PluginEvent;
+import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.plugin.AbstractHobsonPlugin;
@@ -64,10 +69,30 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     @EventHandler
-    public void onDeviceVariableUpdate(DeviceVariablesUpdateEvent event) {
+    public void onDeviceEvent(DeviceEvent event) {
         if (channel != null && channel.isOpen()) {
-            logger.trace("Writing event to client channels: " + event.toString());
-            clientChannels.writeAndFlush(new TextWebSocketFrame(createVariableUpdateJSON(event).toString()));
+            if (event instanceof DeviceVariablesUpdateEvent) {
+                logger.trace("Writing event to client channels: " + event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createVariableUpdateJSON((DeviceVariablesUpdateEvent)event).toString()));
+            } else if (event instanceof DeviceUnavailableEvent) {
+                logger.trace("Writing event to client channels: " + event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createDeviceUnavailableJSON((DeviceUnavailableEvent)event).toString()));
+            } else if (event instanceof DeviceAvailableEvent) {
+                logger.trace("Writing event to client channels: " + event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createDeviceAvailableJSON((DeviceAvailableEvent)event).toString()));
+            }
+        } else {
+            logger.trace("Channel not open; ignoring event: " + event);
+        }
+    }
+
+    @EventHandler
+    public void onPluginEvent(PluginEvent event) {
+        if (channel != null && channel.isOpen()) {
+            if (event instanceof PluginStartedEvent) {
+                logger.trace("Writing event to client channels: " + event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createPluginStartedEventJSON((PluginStartedEvent)event).toString()));
+            }
         } else {
             logger.trace("Channel not open; ignoring event: " + event);
         }
@@ -191,6 +216,37 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         for (String key : p.keySet()) {
             props.put(key, p.get(key));
         }
+        return json;
+    }
+
+    private JSONObject createDeviceUnavailableJSON(DeviceUnavailableEvent event) {
+        JSONObject json = new JSONObject();
+        json.put("id", event.getEventId());
+        json.put("timestamp", event.getTimestamp());
+        JSONObject props = new JSONObject();
+        json.put("properties", props);
+        props.put("id", "/api/v1/hubs/" + event.getDeviceContext().getHubId() + "/plugins/local/" + event.getDeviceContext().getPluginId() + "/devices/" + event.getDeviceContext().getDeviceId());
+        return json;
+    }
+
+    private JSONObject createDeviceAvailableJSON(DeviceAvailableEvent event) {
+        JSONObject json = new JSONObject();
+        json.put("id", event.getEventId());
+        json.put("timestamp", event.getTimestamp());
+        JSONObject props = new JSONObject();
+        json.put("properties", props);
+        props.put("id", "/api/v1/hubs/" + event.getDeviceContext().getHubId() + "/plugins/local/" + event.getDeviceContext().getPluginId() + "/devices/" + event.getDeviceContext().getDeviceId());
+        return json;
+    }
+
+    private JSONObject createPluginStartedEventJSON(PluginStartedEvent event) {
+        JSONObject json = new JSONObject();
+        json.put("id", event.getEventId());
+        json.put("timestamp", event.getTimestamp());
+        JSONObject props = new JSONObject();
+        json.put("properties", props);
+        props.put("id", "/api/v1/hubs/" + event.getContext().getHubId() + "/plugins/local/" + event.getContext().getPluginId());
+        props.put("pluginId", event.getContext().getPluginId());
         return json;
     }
 }
