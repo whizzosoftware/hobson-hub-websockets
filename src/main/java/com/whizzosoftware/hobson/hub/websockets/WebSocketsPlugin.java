@@ -18,11 +18,14 @@ import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.plugin.PluginEvent;
 import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskUpdatedEvent;
 import com.whizzosoftware.hobson.api.plugin.AbstractHobsonPlugin;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.api.task.HobsonTask;
+import com.whizzosoftware.hobson.api.task.TaskContext;
 import com.whizzosoftware.hobson.api.variable.DeviceVariableUpdate;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -91,7 +94,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         if (channel != null && channel.isOpen()) {
             if (event instanceof PluginStartedEvent) {
                 logger.trace("Writing event to client channels: " + event.toString());
-                clientChannels.writeAndFlush(new TextWebSocketFrame(createPluginStartedEventJSON((PluginStartedEvent)event).toString()));
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createPluginStartedJSON((PluginStartedEvent)event).toString()));
             }
         } else {
             logger.trace("Channel not open; ignoring event: " + event);
@@ -109,10 +112,21 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     @EventHandler
-    public void onTaskExecutionUpdate(TaskExecutionEvent event) {
+    public void onTaskEvent(TaskEvent event) {
         if (channel != null && channel.isOpen()) {
-            logger.trace("Writing event to client channels: " + event.toString());
-            clientChannels.writeAndFlush(new TextWebSocketFrame(createTaskExecutionJSON(event).toString()));
+            if (event instanceof TaskExecutionEvent) {
+                logger.trace("Writing event to client channels: " + event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createTaskExecutionJSON((TaskExecutionEvent)event).toString()));
+            } else if (event instanceof TaskUpdatedEvent) {
+                logger.trace("Writing event to client channels: " + event.toString());
+                TaskUpdatedEvent e = (TaskUpdatedEvent)event;
+                HobsonTask task = getTaskManager().getTask(e.getTask());
+                if (task != null) {
+                    clientChannels.writeAndFlush(new TextWebSocketFrame(createTaskUpdatedJSON(e, task).toString()));
+                } else {
+                    logger.error("Received task update for non-existent task: {}", e.getTask());
+                }
+            }
         } else {
             logger.trace("Channel not open; ignoring event: " + event);
         }
@@ -239,7 +253,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         return json;
     }
 
-    private JSONObject createPluginStartedEventJSON(PluginStartedEvent event) {
+    private JSONObject createPluginStartedJSON(PluginStartedEvent event) {
         JSONObject json = new JSONObject();
         json.put("id", event.getEventId());
         json.put("timestamp", event.getTimestamp());
@@ -247,6 +261,28 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + event.getContext().getHubId() + "/plugins/local/" + event.getContext().getPluginId());
         props.put("pluginId", event.getContext().getPluginId());
+        return json;
+    }
+
+    private JSONObject createTaskUpdatedJSON(TaskUpdatedEvent event, HobsonTask task) {
+        TaskContext ctx = event.getTask();
+        JSONObject json = new JSONObject();
+        json.put("id", event.getEventId());
+        json.put("timestamp", event.getTimestamp());
+        JSONObject props = new JSONObject();
+        json.put("properties", props);
+        props.put("id", "/api/v1/hubs/" + ctx.getHubId() + "/tasks/" + ctx.getTaskId());
+        props.put("name", task.getName());
+        props.put("description", task.getDescription());
+        props.put("enabled", task.isEnabled());
+        if (task.hasProperties()) {
+            JSONObject props2 = new JSONObject();
+            props.put("taskProperties", props2);
+            Map<String, Object> p = task.getProperties();
+            for (String key : p.keySet()) {
+                props2.put(key, p.get(key));
+            }
+        }
         return json;
     }
 }
