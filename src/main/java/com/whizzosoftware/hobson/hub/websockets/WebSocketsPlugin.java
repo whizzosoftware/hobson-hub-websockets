@@ -62,6 +62,10 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     @Override
+    public void onPluginConfigurationUpdate(PropertyContainer config) {
+    }
+
+    @Override
     protected TypedProperty[] getConfigurationPropertyTypes() {
         return null;
     }
