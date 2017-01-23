@@ -15,8 +15,7 @@ import com.whizzosoftware.hobson.api.event.device.DeviceEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceVariablesUpdateEvent;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
-import com.whizzosoftware.hobson.api.event.plugin.PluginEvent;
-import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
+import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
@@ -94,19 +93,17 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     @EventHandler
-    public void onPluginEvent(PluginEvent event) {
+    public void onPluginStatusChangeEvent(PluginStatusChangeEvent event) {
         if (channel != null && channel.isOpen()) {
-            if (event instanceof PluginStartedEvent) {
-                logger.trace("Writing event to client channels: " + event.toString());
-                clientChannels.writeAndFlush(new TextWebSocketFrame(createPluginStartedJSON((PluginStartedEvent)event).toString()));
-            }
+            logger.trace("Writing event to client channels: " + event.toString());
+            clientChannels.writeAndFlush(new TextWebSocketFrame(createPluginStatusChangeJSON(event).toString()));
         } else {
             logger.trace("Channel not open; ignoring event: " + event);
         }
     }
 
     @EventHandler
-    public void onPresenceUpdate(PresenceUpdateNotificationEvent event) {
+    public void onPresenceUpdateEvent(PresenceUpdateNotificationEvent event) {
         if (channel != null && channel.isOpen()) {
             logger.trace("Writing event to client channels: " + event.toString());
             clientChannels.writeAndFlush(new TextWebSocketFrame(createPresenceUpdateJSON(event).toString()));
@@ -137,7 +134,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     @EventHandler
-    public void onHubConfigurationUpdate(HubConfigurationUpdateEvent event) {
+    public void onHubConfigurationUpdateEvent(HubConfigurationUpdateEvent event) {
         if (channel != null && channel.isOpen()) {
             logger.trace("Writing event to client channels: " + event.toString());
             clientChannels.writeAndFlush(new TextWebSocketFrame(createHubConfigurationJSON(event).toString()));
@@ -257,7 +254,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         return json;
     }
 
-    private JSONObject createPluginStartedJSON(PluginStartedEvent event) {
+    private JSONObject createPluginStatusChangeJSON(PluginStatusChangeEvent event) {
         JSONObject json = new JSONObject();
         json.put("id", event.getEventId());
         json.put("timestamp", event.getTimestamp());
@@ -265,6 +262,10 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + event.getContext().getHubId() + "/plugins/local/" + event.getContext().getPluginId());
         props.put("pluginId", event.getContext().getPluginId());
+        JSONObject status = new JSONObject();
+        status.put("code", event.getStatus().getCode());
+        status.put("message", event.getStatus().getMessage());
+        props.put("status", status);
         return json;
     }
 
