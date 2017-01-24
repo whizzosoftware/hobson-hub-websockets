@@ -227,7 +227,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         json.put("timestamp", event.getTimestamp());
         JSONObject props = new JSONObject();
         json.put("configuration", props);
-        Map<String,Object> p = event.getConfiguration().getPropertyValues();
+        Map<String,Object> p = event.getConfiguration();
         for (String key : p.keySet()) {
             props.put(key, p.get(key));
         }
