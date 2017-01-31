@@ -10,6 +10,7 @@
 package com.whizzosoftware.hobson.hub.websockets;
 
 import com.whizzosoftware.hobson.api.event.EventHandler;
+import com.whizzosoftware.hobson.api.event.HobsonEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceAvailableEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
@@ -17,6 +18,7 @@ import com.whizzosoftware.hobson.api.event.device.DeviceVariablesUpdateEvent;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskDeletedEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskUpdatedEvent;
@@ -127,6 +129,9 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
                 } else {
                     logger.error("Received task update for non-existent task: {}", e.getTask());
                 }
+            } else if (event instanceof TaskDeletedEvent) {
+                logger.trace("Writing event to client channels: " + event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createTaskDeletedJSON((TaskDeletedEvent)event).toString()));
             }
         } else {
             logger.trace("Channel not open; ignoring event: " + event);
@@ -174,9 +179,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     private JSONObject createVariableUpdateJSON(DeviceVariablesUpdateEvent event) {
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
         JSONArray updates = new JSONArray();
@@ -196,9 +199,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     private JSONObject createPresenceUpdateJSON(PresenceUpdateNotificationEvent event) {
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
         props.put("hubId", event.getEntityContext().getHubId());
@@ -211,9 +212,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     private JSONObject createTaskExecutionJSON(TaskExecutionEvent event) {
         HobsonTask task = getTaskManager().getTask(event.getContext());
 
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + event.getContext().getHubId() + "/tasks/" + event.getContext().getTaskId());
@@ -222,9 +221,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     private JSONObject createHubConfigurationJSON(HubConfigurationUpdateEvent event) {
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("configuration", props);
         Map<String,Object> p = event.getConfiguration();
@@ -235,9 +232,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     private JSONObject createDeviceUnavailableJSON(DeviceUnavailableEvent event) {
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + event.getDeviceContext().getHubId() + "/plugins/local/" + event.getDeviceContext().getPluginId() + "/devices/" + event.getDeviceContext().getDeviceId());
@@ -245,9 +240,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     private JSONObject createDeviceAvailableJSON(DeviceAvailableEvent event) {
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + event.getDeviceContext().getHubId() + "/plugins/local/" + event.getDeviceContext().getPluginId() + "/devices/" + event.getDeviceContext().getDeviceId());
@@ -255,9 +248,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     }
 
     private JSONObject createPluginStatusChangeJSON(PluginStatusChangeEvent event) {
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + event.getContext().getHubId() + "/plugins/local/" + event.getContext().getPluginId());
@@ -271,9 +262,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
 
     private JSONObject createTaskUpdatedJSON(TaskUpdatedEvent event, HobsonTask task) {
         TaskContext ctx = event.getTask();
-        JSONObject json = new JSONObject();
-        json.put("id", event.getEventId());
-        json.put("timestamp", event.getTimestamp());
+        JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
         props.put("id", "/api/v1/hubs/" + ctx.getHubId() + "/tasks/" + ctx.getTaskId());
@@ -288,6 +277,22 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
                 props2.put(key, p.get(key));
             }
         }
+        return json;
+    }
+
+    private JSONObject createTaskDeletedJSON(TaskDeletedEvent event) {
+        TaskContext ctx = event.getTask();
+        JSONObject json = createEventJSON(event);
+        JSONObject props = new JSONObject();
+        json.put("properties", props);
+        props.put("id", "/api/v1/hubs/" + ctx.getHubId() + "/tasks/" + ctx.getTaskId());
+        return json;
+    }
+
+    private JSONObject createEventJSON(HobsonEvent event) {
+        JSONObject json = new JSONObject();
+        json.put("id", event.getEventId());
+        json.put("timestamp", event.getTimestamp());
         return json;
     }
 }
