@@ -23,6 +23,7 @@ import com.whizzosoftware.hobson.api.event.task.TaskEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskUpdatedEvent;
 import com.whizzosoftware.hobson.api.plugin.AbstractHobsonPlugin;
+import com.whizzosoftware.hobson.api.plugin.PluginType;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.api.task.HobsonTask;
@@ -74,6 +75,11 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     @Override
     public String getName() {
         return "WebSockets Plugin";
+    }
+
+    @Override
+    public PluginType getType() {
+        return PluginType.CORE;
     }
 
     @EventHandler
