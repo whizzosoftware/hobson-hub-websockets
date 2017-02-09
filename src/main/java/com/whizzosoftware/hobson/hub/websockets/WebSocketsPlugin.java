@@ -11,10 +11,7 @@ package com.whizzosoftware.hobson.hub.websockets;
 
 import com.whizzosoftware.hobson.api.event.EventHandler;
 import com.whizzosoftware.hobson.api.event.HobsonEvent;
-import com.whizzosoftware.hobson.api.event.device.DeviceAvailableEvent;
-import com.whizzosoftware.hobson.api.event.device.DeviceEvent;
-import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
-import com.whizzosoftware.hobson.api.event.device.DeviceVariablesUpdateEvent;
+import com.whizzosoftware.hobson.api.event.device.*;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
@@ -86,14 +83,17 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
     public void onDeviceEvent(DeviceEvent event) {
         if (channel != null && channel.isOpen()) {
             if (event instanceof DeviceVariablesUpdateEvent) {
-                logger.trace("Writing event to client channels: " + event.toString());
+                logger.trace("Writing event to client channels: {}", event.toString());
                 clientChannels.writeAndFlush(new TextWebSocketFrame(createVariableUpdateJSON((DeviceVariablesUpdateEvent)event).toString()));
             } else if (event instanceof DeviceUnavailableEvent) {
-                logger.trace("Writing event to client channels: " + event.toString());
-                clientChannels.writeAndFlush(new TextWebSocketFrame(createDeviceUnavailableJSON((DeviceUnavailableEvent)event).toString()));
+                logger.trace("Writing event to client channels: {}", event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createDeviceJSON(event).toString()));
             } else if (event instanceof DeviceAvailableEvent) {
-                logger.trace("Writing event to client channels: " + event.toString());
-                clientChannels.writeAndFlush(new TextWebSocketFrame(createDeviceAvailableJSON((DeviceAvailableEvent)event).toString()));
+                logger.trace("Writing event to client channels: {}", event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createDeviceJSON(event).toString()));
+            } else if (event instanceof DeviceStartedEvent) {
+                logger.trace("Writing event to client channels: {}", event.toString());
+                clientChannels.writeAndFlush(new TextWebSocketFrame(createDeviceJSON(event).toString()));
             }
         } else {
             logger.trace("Channel not open; ignoring event: " + event);
@@ -237,15 +237,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         return json;
     }
 
-    private JSONObject createDeviceUnavailableJSON(DeviceUnavailableEvent event) {
-        JSONObject json = createEventJSON(event);
-        JSONObject props = new JSONObject();
-        json.put("properties", props);
-        props.put("id", "/api/v1/hubs/" + event.getDeviceContext().getHubId() + "/plugins/local/" + event.getDeviceContext().getPluginId() + "/devices/" + event.getDeviceContext().getDeviceId());
-        return json;
-    }
-
-    private JSONObject createDeviceAvailableJSON(DeviceAvailableEvent event) {
+    private JSONObject createDeviceJSON(DeviceEvent event) {
         JSONObject json = createEventJSON(event);
         JSONObject props = new JSONObject();
         json.put("properties", props);
