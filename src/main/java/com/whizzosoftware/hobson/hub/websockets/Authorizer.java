@@ -9,9 +9,9 @@
 */
 package com.whizzosoftware.hobson.hub.websockets;
 
-import com.whizzosoftware.hobson.api.hub.HubManager;
-import com.whizzosoftware.hobson.api.user.HobsonRole;
-import com.whizzosoftware.hobson.api.user.HobsonUser;
+import com.whizzosoftware.hobson.api.security.AccessManager;
+import com.whizzosoftware.hobson.api.security.AuthorizationAction;
+import com.whizzosoftware.hobson.api.security.HobsonUser;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
@@ -29,11 +29,11 @@ import java.util.Set;
 public class Authorizer extends SimpleChannelInboundHandler<FullHttpRequest> {
     private static final Logger logger = LoggerFactory.getLogger(Authorizer.class);
 
-    private HubManager hubManager;
+    private AccessManager accessManager;
 
-    Authorizer(HubManager hubManager) {
+    Authorizer(AccessManager accessManager) {
         super();
-        this.hubManager = hubManager;
+        this.accessManager = accessManager;
     }
 
     @Override
@@ -62,8 +62,9 @@ public class Authorizer extends SimpleChannelInboundHandler<FullHttpRequest> {
         // if we found a token, process the message
         if (token != null) {
             try {
-                HobsonUser user = hubManager.convertTokenToUser(token);
-                if (user != null && (user.hasRole(HobsonRole.administrator.name()) || user.hasRole(HobsonRole.userRead.name()))) {
+                HobsonUser user = accessManager.authenticate(token);
+                accessManager.authorize(user, AuthorizationAction.HUB_READ, null);
+                if (user != null) {
                     logger.trace("Found token, passing message along");
                     ctx.fireChannelRead(message.retain());
                 }

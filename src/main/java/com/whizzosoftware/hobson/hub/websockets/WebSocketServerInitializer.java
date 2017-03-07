@@ -9,7 +9,7 @@
 */
 package com.whizzosoftware.hobson.hub.websockets;
 
-import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.security.AccessManager;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.group.ChannelGroup;
@@ -22,11 +22,11 @@ class WebSocketServerInitializer extends ChannelInitializer<SocketChannel> {
     private static final String WEBSOCKET_PATH = "/websockets";
 
     private final ChannelGroup clientChannels;
-    private final HubManager hubManager;
+    private final AccessManager accessManager;
 
-    WebSocketServerInitializer(ChannelGroup clientChannels, HubManager hubManager) {
+    WebSocketServerInitializer(ChannelGroup clientChannels, AccessManager accessManager) {
         this.clientChannels = clientChannels;
-        this.hubManager = hubManager;
+        this.accessManager = accessManager;
     }
 
     @Override
@@ -34,7 +34,7 @@ class WebSocketServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
-        pipeline.addLast(new Authorizer(hubManager));
+        pipeline.addLast(new Authorizer(accessManager));
         pipeline.addLast(new WebSocketServerProtocolHandler(WEBSOCKET_PATH, null, true));
         pipeline.addLast(new WebSocketFrameHandler(clientChannels));
     }

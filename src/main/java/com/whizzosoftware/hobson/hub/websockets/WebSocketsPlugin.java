@@ -161,7 +161,7 @@ public class WebSocketsPlugin extends AbstractHobsonPlugin {
         b.group(bossGroup, workerGroup)
             .channel(NioServerSocketChannel.class)
             .handler(new LoggingHandler(LogLevel.INFO))
-            .childHandler(new WebSocketServerInitializer(clientChannels, getHubManager()));
+            .childHandler(new WebSocketServerInitializer(clientChannels, getAccessManager()));
 
         b.bind(PORT).addListener(new GenericFutureListener<ChannelFuture>() {
            @Override
