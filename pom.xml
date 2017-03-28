@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.whizzosoftware.hobson.hub</groupId>
     <artifactId>hobson-hub-websockets</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>Hobson WebSockets Plugin</name>
     <description>Provides the ability to receive real-time Hobson events via WebSockets.</description>
