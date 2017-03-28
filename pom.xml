@@ -144,14 +144,14 @@
         </repository>
     </repositories>
     <scm>
-        <connection>scm:git:ssh://git@github.com/whizzosoftware/hobson-hub-websocket.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/whizzosoftware/hobson-hub-websocket.git</developerConnection>
-        <tag>hobson-hub-websockets-0.1.0</tag>
+        <connection>scm:git:ssh://git@github.com/whizzosoftware/hobson-hub-websockets.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/whizzosoftware/hobson-hub-websockets.git</developerConnection>
+        <tag>HEAD</tag>
     </scm>
     <distributionManagement>
         <repository>
             <id>bintray</id>
-            <url>https://api.bintray.com/maven/whizzosoftware/maven/hobson-hub-websocket</url>
+            <url>https://api.bintray.com/maven/whizzosoftware/maven/hobson-hub-websockets</url>
         </repository>
     </distributionManagement>
     <properties>
